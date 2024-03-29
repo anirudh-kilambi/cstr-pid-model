@@ -1,12 +1,12 @@
 import csv
 import time
+import random
 import numpy as np
 import matplotlib.pyplot as plt
-from scipy.integrate import odeint, solve_ivp
+from scipy.integrate import odeint
 from typing import Any, Iterable, List, Optional
 
-
-def model(t, x, qc):
+def model(time, x, qc, q):
     """
     This function creates the system of differential equations
     needed to model the concentration of reactants and products,
@@ -31,28 +31,30 @@ def model(t, x, qc):
     R = 8.14 # J/(mol * k)
     Ea = 50241.6 # Activation Energy, J/mol
     A = 3.19 * 10**8 # pre exponential factor, min^-1
+    delta_Hr = -60000 # heat of reaction, J/mol
+
     V = np.pi/2 # volume of reactor, m^3
     Cp = 4.186 # heat capacity J/gk
     U = 43500 # overall heat transfer coefficient, J/m^2 min K
-    q = 0.5 # inlet flow rate to CSTR, m^3/min 
-    To = 298.15 # inlet temperature of reactor feed stream, 25 C
-    Tco = 278.15 # inlet temperature of coolant stream, 5 C
-    delta_Hr = -60000 # heat of reaction, J/mol
+    # q = 0.1
+    # To = 298.15 # inlet temperature of reactor feed stream, 25 C
+    To = 298
+    Tco = 273.15 # inlet temperature of coolant stream, 5 C
     rho = 997000 # g/m^3 at SATP
     area = 7.068 # m^2 (side plus bottom)
-    Vc = np.pi/4
+    Vc = np.pi/2
 
-    Cao = 1 # mol/m^3
-    Cbo = 50 # mol/m^3
+    Cao = 500 # mol/m^3
+    Cbo = 500 # mol/m^3
 
     Ca, Cb, Cc, T, Tc = x[0], x[0], x[1], x[2], x[3] 
 
     k = A * np.exp(-Ea/(R * T))
-    Ra = -k*Ca*Ca
-    Vc = np.pi/4
+    Ra = -k*Ca*Cb
+    Rc = k * Ca * Cb
 
-    dCa_dt = q * (Cao - Ca) - Ra * V
-    dCc_dt = -q * Cc + Ra * V
+    dCa_dt = q * (Cao - Ca) + Ra * V
+    dCc_dt = -q * Cc + Rc * V
     dT_dt = (q/V) * (To - T) + (Ra * delta_Hr)/(rho * Cp) - ((U * area)/(rho * V * Cp)) * (T - Tc)
     dTc_dt = (qc/Vc) * (Tco - Tc) + ((U * area)/(rho * Vc * Cp)) * (T - Tc)
 
@@ -63,50 +65,42 @@ def model(t, x, qc):
         dTc_dt
     ]
 
-t = np.linspace(0, 600, 601) # t span, 600 minutes
-qc = np.ones(601)*0.1
+t = np.linspace(0, 600 , 601) # t span, 600 minutes
+qc = np.ones(601)*0.5
+conversion = [0]
 
-y0 = [1, 0, 298.15, 278.15]
+Cao = 100
+Cco = 0
+To = 298
+Tco = To
+y0 = [Cao, Cco, To, Tco]
 
 Ca, Cc, T, Tc = np.ones(601), np.ones(601), np.ones(601), np.ones(601)
 Ca[0], Cc[0], T[0], Tc[0] = y0[0], y0[1], y0[2], y0[3]
-print(t[0], t[1])
 
-# for i in range(len(t) - 1):
-
-#     ts  = [t[i], t[i+1]]
-#     y = odeint(model, y0, ts, args=(qc[i],))
-#     y0 = y[-1]
-#     Ca[i+1], Cc[i+1], T[i+1], Tc[i+1] = y0[0], y0[1], y0[2], y0[3]
-#     time.sleep(3)
-# y = odeint(model, y0, t, args=(qc,))
-# sol = solve_ivp(model, (t[0], t[-1]), y0, args=(qc[0],), t_eval=t[1:-1])
-sol = solve_ivp(model, (t[0], t[-1]), y0, args=(qc[0],))
-for i in range(len(sol.t) - 1):
-
-    ts  = [sol.t[i], sol.t[i+1]]
-    y = odeint(model, y0, ts, args=(qc[i],), tfirst=True)
+for i in range(len(t) - 1):
+    ts  = [t[i], t[i+1]]
+    q = random.uniform(0.095, 0.105) # inlet flow rate to CSTR, m^3/min 
+    y = odeint(model, y0, ts, args=(qc[i], q), tfirst=True)
     y0 = y[-1]
     Ca[i+1], Cc[i+1], T[i+1], Tc[i+1] = y0[0], y0[1], y0[2], y0[3]
+    x = (Cao - Ca[i+1])/(Cao)
+    conversion.append(x)
 
-print(sol.t)
-
-solve_ip_Ca = sol.y[0, :]
-solve_ip_Cb = sol.y[0, :]
-solve_ip_Cc = sol.y[1, :]
-solve_ip_T = sol.y[2, :]
-solve_ip_Tc = sol.y[3, :]
-
+print(f"conversion 300 {conversion[300]}")
 
 plt.figure()
-plt.subplot(2,1,1)
-# plt.ylabel("Concentration (mol/m^3)")
-# plt.xlabel("Time (min)")
-#plt.plot(t, Ca, label="Concentration of A ")
-plt.plot(sol.t, solve_ip_T, label="IVP T")
-plt.subplot(2,1,2)
-plt.plot(t, T, label="ODEINT T")
+plt.subplot(3,1,1)
+plt.plot(t[:100], T[:100], label="ODEINT T")
+plt.ylabel("Temperature (K)")
+plt.xlabel("Time (min)")
+plt.legend()
+plt.subplot(3,1,2)
+plt.ylabel("Concentration (mol/m^3)")
+plt.plot(t[:100], Cc[:100], label="Concentration of C ")
+plt.plot(t[:100], Ca[:100], label="Concentration of A ")
+plt.legend()
+plt.subplot(3,1,3)
+plt.plot(t[10:100], conversion[10:100], label="Conversion of A")
 plt.legend()
 plt.show()
-
-
