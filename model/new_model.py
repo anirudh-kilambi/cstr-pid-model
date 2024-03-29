@@ -29,7 +29,7 @@ def model(t, x, qc):
 
     #parameters
     R = 8.14 # J/(mol * k)
-    Ea = 50241.6 # Activation Energy, J/mol
+    Ea = 11243.9 # Activation Energy, J/mol
     A = 3.19 * 10**8 # pre exponential factor, min^-1
     V = np.pi/2 # volume of reactor, m^3
     Cp = 4.186 # heat capacity J/gk
@@ -40,19 +40,21 @@ def model(t, x, qc):
     delta_Hr = -60000 # heat of reaction, J/mol
     rho = 997000 # g/m^3 at SATP
     area = 7.068 # m^2 (side plus bottom)
+    Vc = np.pi/4
 
-    Cao = 50 # mol/m^3
-    Cbo = 50 # mol/m^3
+    Cao = 1 # mol/m^3
+    Cbo = 1 # mol/m^3
 
     Ca, Cb, Cc, T, Tc = x[0], x[0], x[1], x[2], x[3] 
 
     k = A * np.exp(-Ea/(R * T))
     Ra = -k*Ca*Cb
+    Rc = k * Ca * Cb
 
-    dCa_dt = q * (Cao - Ca) - Ra * V
-    dCc_dt = -q * Cc + Ra * V
-    dT_dt = (To - T) + (Ra*V*delta_Hr - U*area*(T-Tc))/(rho*q*Cp)
-    dTc_dt = (Tco - Tc) + (U*area*(T-Tc))/(rho*qc*Cp)
+    dCa_dt = q * (Cao - Ca) + Ra * V
+    dCc_dt = -q * Cc + Rc * V
+    dT_dt = (q/V) * (To - T) + (Ra * delta_Hr)/(rho * Cp) - ((U * area)/(rho * V * Cp)) * (T - Tc)
+    dTc_dt = (qc/Vc) * (Tco - Tc) + ((U * area)/(rho * Vc * Cp)) * (T - Tc)
 
     return [
         dCa_dt,
@@ -62,9 +64,9 @@ def model(t, x, qc):
     ]
 
 t = np.linspace(0, 600 , 601) # t span, 600 minutes
-qc = np.ones(601)*1
+qc = np.ones(601)*0.01
 
-y0 = [601, 0, 298.15, 278.15]
+y0 = [1, 0, 298.15, 278.15]
 
 Ca, Cc, T, Tc = np.ones(601), np.ones(601), np.ones(601), np.ones(601)
 Ca[0], Cc[0], T[0], Tc[0] = y0[0], y0[1], y0[2], y0[3]
@@ -79,7 +81,12 @@ for i in range(len(t) - 1):
 
 
 plt.figure()
-plt.plot(t, T, label="ODEINT T")
+plt.plot(t, T, label="T")
+plt.legend()
+plt.show()
+plt.figure()
+plt.plot(t, Ca, label="A")
+plt.plot(t, Cc, label="C")
 plt.legend()
 plt.show()
 
