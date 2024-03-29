@@ -61,12 +61,12 @@ def model(t, x, qc):
         dTc_dt
     ]
 
-t = np.linspace(0, 600, 601) # t span, 600 minutes
-qc = np.ones(601)*0.1
+t = np.linspace(0, 600 , 6001) # t span, 600 minutes
+qc = np.ones(6001)*1
 
-y0 = [50, 0, 298.15, 278.15]
+y0 = [6001, 0, 298.15, 278.15]
 
-Ca, Cc, T, Tc = np.ones(601), np.ones(601), np.ones(601), np.ones(601)
+Ca, Cc, T, Tc = np.ones(6001), np.ones(6001), np.ones(6001), np.ones(6001)
 Ca[0], Cc[0], T[0], Tc[0] = y0[0], y0[1], y0[2], y0[3]
 print(t[0], t[1])
 
@@ -79,30 +79,16 @@ print(t[0], t[1])
 #     time.sleep(3)
 # y = odeint(model, y0, t, args=(qc,))
 # sol = solve_ivp(model, (t[0], t[-1]), y0, args=(qc[0],), t_eval=t[1:-1])
-sol = solve_ivp(model, (t[0], t[-1]), y0, args=(qc[0],))
-for i in range(len(sol.t) - 1):
 
-    ts  = [sol.t[i], sol.t[i+1]]
+for i in range(len(t) - 1):
+
+    ts  = [t[i], t[i+1]]
     y = odeint(model, y0, ts, args=(qc[i],), tfirst=True)
     y0 = y[-1]
     Ca[i+1], Cc[i+1], T[i+1], Tc[i+1] = y0[0], y0[1], y0[2], y0[3]
 
-print(sol.t)
-
-solve_ip_Ca = sol.y[0, :]
-solve_ip_Cb = sol.y[0, :]
-solve_ip_Cc = sol.y[1, :]
-solve_ip_T = sol.y[2, :]
-solve_ip_Tc = sol.y[3, :]
-
 
 plt.figure()
-plt.subplot(2,1,1)
-# plt.ylabel("Concentration (mol/m^3)")
-# plt.xlabel("Time (min)")
-#plt.plot(t, Ca, label="Concentration of A ")
-plt.plot(sol.t, solve_ip_T, label="IVP T")
-plt.subplot(2,1,2)
 plt.plot(t, T, label="ODEINT T")
 plt.legend()
 plt.show()
