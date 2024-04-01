@@ -7,6 +7,9 @@ from scipy.integrate import odeint
 from typing import Any, Iterable, List, Optional
 
 
+#TODO: np.random.normal(mean, variance, dimensions of output)
+
+
 def model(time, x, qc, q):
     """
     This function creates the system of differential equations
