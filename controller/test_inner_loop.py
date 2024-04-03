@@ -37,6 +37,10 @@ sp2_qc = np.ones(301)
 
 pv1_conversion = np.zeros(301)
 pv2_qc = np.ones(301)
+sp2_qc[:100] = 0
+sp2_qc[100:200] = 0.75
+sp2_qc[200:250] = 0.5
+sp2_qc[250:] = 1
 
 ie1 = 0
 ie2 = 0
@@ -52,9 +56,10 @@ KP1 = -0.002
 KI1 = 0.01 #placeholder
 KD1 = 0.05 #placeholder
 #inner
-KP2 = 2
-KI2 = 0.01 #placeholder
-KD2 = -2.23 #placeholder
+KP2 = 1
+KI2 = 2 #placeholder
+# KD2 = -2.23 #placeholder
+KD2 = -2.5 #placeholder
 
 def outer_pid(sp1, pv1, pv1_last, ierr, dt):
     """
@@ -113,7 +118,7 @@ def outer_pid(sp1, pv1, pv1_last, ierr, dt):
     # # return the controller output and PID terms
     # return op
 
-def inner_pid(sp2,pv2,pv_last2,ierr2,dt): 
+def inner_pid(sp2,pv2,pv_last2,ierr2,dt, KP2): 
     """
     The inner controller that handles the coolant flowrate.
     Set point = coolant flowrate (qc)
@@ -138,6 +143,7 @@ def inner_pid(sp2,pv2,pv_last2,ierr2,dt):
     oplo = 0
     # calculate the error
     error = sp2-pv2
+    print(f"error => {error}")
     # calculate the integral error
     ierr2 += KI * error * dt
     # calculate the measurement derivative
@@ -156,21 +162,25 @@ def inner_pid(sp2,pv2,pv_last2,ierr2,dt):
     # return the controller output and PID terms
     return [op, I]
 
+
+kp = 1
+j = True
+
 for i in range(1,300):
     ts = [t[i], t[i + 1]]
     if i < 1:
-        sp2_qc[i], ie1 = outer_pid(sp1_conversion[i], pv1_conversion[i], 0, ie1, dt)
-        U[i], ie2 = inner_pid(sp2_qc[i], pv2_qc[i], 0, ie2, dt)
+        # sp2_qc[i], ie1 = outer_pid(sp1_conversion[i], pv1_conversion[i], 0, ie1, dt)
+        U[i], ie2 = inner_pid(sp2_qc[i], pv2_qc[i], 0, ie2, dt, kp)
     else:
-        sp2_qc[i], ie1 = outer_pid(sp1_conversion[i], pv1_conversion[i], pv1_conversion[i-1], ie1, dt)
-        U[i], ie2 = inner_pid(sp2_qc[i], pv2_qc[i], pv2_qc[i - 1], ie2, dt)
+        # sp2_qc[i], ie1 = outer_pid(sp1_conversion[i], pv1_conversion[i], pv1_conversion[i-1], ie1, dt)
+        U[i], ie2 = inner_pid(sp2_qc[i], pv2_qc[i], pv2_qc[i - 1], ie2, dt, kp)
 
-    pv2_qc[i+1] = U[i]
+    pv2_qc[i + 1] = U[i]
     y = odeint(model, yo, [0, dt], args=(U[i], q), tfirst=True)
     yo = y[-1] + np.random.normal(0, 0.1, 4)
     Ca[i], Cc[i], T[i], Tc[i] = yo[0], yo[1], yo[2], yo[3]
     x = conversion(Ca[i])
-    print(f"CONVERSION => {x}")
+    # print(f"CONVERSION => {x}")
     pv1_conversion[i+1] = x
 
 

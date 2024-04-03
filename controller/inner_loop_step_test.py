@@ -12,11 +12,15 @@ conversion = [0]
 
 # Step Test
 u = np.ones(301) * 0
-u[200:] = 1
+u[200:] = 0.5
 
 qc = np.ones(301) * 0
+R = 25
+theta = np.sqrt(100/1.1)
+Cv = 2
 for i in range(len(t)):
-    qc[i] = u[i] * 1
+    qc[i] = Cv * R**(u[i] - 1) * theta
+    print(u[i], qc[i])
 
 plt.figure()
 plt.subplot(2,1,1)
