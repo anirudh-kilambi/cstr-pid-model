@@ -48,13 +48,13 @@ ie2 = 0
 
 #controller params
 #outer
-KP1 = -0.002
-KI1 = 0.01 #placeholder
-KD1 = 0.05 #placeholder
+KP1 = -0.0333
+KI1 = 0.111 #placeholder
+KD1 = 0.31 #placeholder
 #inner
 KP2 = 2
 KI2 = 0.01 #placeholder
-KD2 = -2.23 #placeholder
+KD2 = -3.01 #placeholder
 
 def outer_pid(sp1, pv1, pv1_last, ierr, dt):
     """
@@ -165,7 +165,7 @@ for i in range(1,300):
         sp2_qc[i], ie1 = outer_pid(sp1_conversion[i], pv1_conversion[i], pv1_conversion[i-1], ie1, dt)
         U[i], ie2 = inner_pid(sp2_qc[i], pv2_qc[i], pv2_qc[i - 1], ie2, dt)
 
-    pv2_qc[i+1] = U[i]
+    pv2_qc[i+1] = U[i]*(2)*(np.sqrt(2/1.1)) #deltaPV = 100bar
     y = odeint(model, yo, [0, dt], args=(U[i], q), tfirst=True)
     yo = y[-1] + np.random.normal(0, 0.1, 4)
     Ca[i], Cc[i], T[i], Tc[i] = yo[0], yo[1], yo[2], yo[3]
