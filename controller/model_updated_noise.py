@@ -26,7 +26,7 @@ def model(time, x, cold_valve, q):
         x[3] = inputs for dTc/dt - cooling jacket
         x[4] = inputs for
     """
-    qc = cold_valve*1
+    qc = cold_valve*2 * np.sqrt(5/1.1)
     # parameters
     R = 8.14  # J/(mol * k)
     Ea = 50241.6  # Activation Energy, J/mol
