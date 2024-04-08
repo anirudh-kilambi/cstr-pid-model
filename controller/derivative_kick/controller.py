@@ -28,10 +28,10 @@ U = np.zeros(301)
 Y = []
 
 #setpoints
-sp1_conversion = np.ones(301)*0.9
-# sp1_conversion[0:100] = 0.9
-# sp1_conversion[100:200] = 0.915
-# sp1_conversion[200:] = 0.89
+sp1_conversion = np.ones(301)
+sp1_conversion[0:100] = 0.9
+sp1_conversion[100:200] = 0.915
+sp1_conversion[200:] = 0.89
 
 sp2_qc = np.ones(301)
 
@@ -41,18 +41,22 @@ pv2_qc = np.ones(301)
 ie1 = 0
 ie2 = 0
 
+#step test params
+# Kc = 
+# tau_i = 
+# tau_d = 
+
 #controller params
 #outer
-KP1 = -30.03
-# KI1 = 0.111 #placeholder
-KI1 = 0
+KP1 = -0.0333
+KI1 = 0.111 #placeholder
 KD1 = 0.31 #placeholder
 #inner
 KP2 = 2
 KI2 = 0.01 #placeholder
 KD2 = -3.01 #placeholder
 
-def outer_pid(sp1, pv1, pv1_last, ierr, dt, q):
+def outer_pid(sp1, pv1, pv1_last, ierr, dt):
     """
     The outer controller that monitors the outlet concentration.
     Set point = conversion (X) via concentration
@@ -70,7 +74,7 @@ def outer_pid(sp1, pv1, pv1_last, ierr, dt, q):
     # KP = Kc
     # KI = Kc/tau_i
     # KD = Kc*tau_d
-    KC = KP1
+    KC = 1/KP1
     KI = KI1
     KD = KD1
     # ubias for controller (initial heater)
@@ -84,16 +88,12 @@ def outer_pid(sp1, pv1, pv1_last, ierr, dt, q):
     ierr += KI * error * dt
     # calculate the measurement derivative
     dpv = (pv1 - pv1_last) / dt
-    # calculate the disturbance
-    d = q - 0.1
     # calculate the PID output
-    P = KC * error 
+    P = KC * error
     I = ierr
     D = -KD * dpv
-    KFF = -6
-    disturbance = KFF * d
     # print(f"PROPORTIONAL TERM => {P}")
-    op = op0 + P + I + D + disturbance
+    op = op0 + P + I + D
     # implement anti-reset windup
     if np.all(op < oplo):
         I = I - KI * error * dt
@@ -158,20 +158,16 @@ def inner_pid(sp2,pv2,pv_last2,ierr2,dt):
 
 for i in range(1,300):
     ts = [t[i], t[i + 1]]
-    if i >125:
-        q = 0.12
-    else:
-        q = 0.1
     if i < 1:
-        sp2_qc[i], ie1 = outer_pid(sp1_conversion[i], pv1_conversion[i], 0, ie1, dt, q)
+        sp2_qc[i], ie1 = outer_pid(sp1_conversion[i], pv1_conversion[i], 0, ie1, dt)
         U[i], ie2 = inner_pid(sp2_qc[i], pv2_qc[i], 0, ie2, dt)
     else:
-        sp2_qc[i], ie1 = outer_pid(sp1_conversion[i], pv1_conversion[i], pv1_conversion[i-1], ie1, dt, q)
+        sp2_qc[i], ie1 = outer_pid(sp1_conversion[i], pv1_conversion[i], pv1_conversion[i-1], ie1, dt)
         U[i], ie2 = inner_pid(sp2_qc[i], pv2_qc[i], pv2_qc[i - 1], ie2, dt)
 
     pv2_qc[i+1] = U[i]*(2)*(np.sqrt(2/1.1)) #deltaPV = 100bar
     y = odeint(model, yo, [0, dt], args=(U[i], q), tfirst=True)
-    yo = y[-1] #+ np.random.normal(0, 0.1, 4)
+    yo = y[-1] + np.random.normal(0, 0.1, 4)
     Ca[i], Cc[i], T[i], Tc[i] = yo[0], yo[1], yo[2], yo[3]
     x = conversion(Ca[i])
     print(f"CONVERSION => {x}")
@@ -179,23 +175,27 @@ for i in range(1,300):
 
 
 plt.figure()
-plt.subplot(4,1,1)
-plt.plot(t[50:280], pv1_conversion[50:280], "b-", label="Conversion (X)")
+plt.subplot(3,1,1)
+plt.plot(t[50:280], pv1_conversion[50:280], "b-", label="Conversion")
 plt.plot(t[50:280], sp1_conversion[50:280], "b:", label="Conversion SP")
 plt.xlabel("time (min)")
 plt.ylabel("conversion")
 plt.legend()
-plt.subplot(4,1,2)
-plt.plot(t[50:280], pv2_qc[50:280], "r-")
+plt.subplot(3,1,2)
+plt.plot(t[50:280], pv2_qc[50:280], "r-", label="Coolant Flow Rate")
 plt.plot(t[50:280], sp2_qc[50:280], "r:", label="Coolant Flow Rate SP")
 plt.xlabel("time (min)")
 plt.ylabel("Coolant Flow Rate (m3/min)")
 plt.legend()
-plt.subplot(4,1,3)
+plt.subplot(3,1,3)
 plt.plot(t[50:280], U[50:280], label="Valve Open %")
 plt.xlabel("time (min)")
 plt.ylabel("Valve Open %")
 plt.legend()
-plt.subplot(4,1,4)
-plt.plot(t[50:280], T[50:280], label="Reactor Temp")
+# plt.subplot(4,1,4)
+# plt.plot(t[50:280], T[50:280], label="Reactor Temp")
+# plt.xlabel("Time (min)")
+# plt.ylabel("Temperature (K)")
 plt.show()
+
+
